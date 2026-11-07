@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRON Forge | Gym Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-12">
+            <div>
+                <h1 class="text-4xl font-extrabold tracking-tighter neon-text">IRON FORGE</h1>
+                <p class="text-gray-400 text-sm uppercase tracking-widest">Precision Fitness Tracking</p>
+            </div>
+            <button onclick="openModal('groupModal')" class="neon-bg px-6 py-2 rounded-full font-bold text-sm transition-all">
+                + NEW GROUP
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <main id="mainContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Workout Groups will be injected here -->
+        </main>
+    </div>
+
+    <!-- Group Modal -->
+    <div id="groupModal" class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-md fade-in">
+            <h2 class="text-2xl font-bold mb-6 neon-text">Create Workout Group</h2>
+            <div class="flex flex-col gap-4">
+                <input type="text" id="groupName" placeholder="e.g. Leg Day, Push Day" class="input-dark p-3 rounded-lg w-full">
+                <div class="flex justify-end gap-3 mt-4">
+                    <button onclick="closeModal('groupModal')" class="text-gray-400 hover:text-white px-4 py-2 transition-colors">Cancel</button>
+                    <button onclick="saveGroup()" class="neon-bg px-6 py-2 rounded-lg font-bold transition-all">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exercise Modal -->
+    <div id="exerciseModal" class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-md fade-in">
+            <h2 class="text-2xl font-bold mb-6 neon-text">Add Exercise</h2>
+            <input type="hidden" id="activeGroupId">
+            <div class="flex flex-col gap-4">
+                <input type="text" id="exerciseName" placeholder="e.g. Bench Press, Squat" class="input-dark p-3 rounded-lg w-full">
+                <div class="flex justify-end gap-3 mt-4">
+                    <button onclick="closeModal('exerciseModal')" class="text-gray-400 hover:text-white px-4 py-2 transition-colors">Cancel</button>
+                    <button onclick="saveExercise()" class="neon-bg px-6 py-2 rounded-lg font-bold transition-all">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Modal -->
+    <div id="logModal" class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-md fade-in">
+            <h2 class="text-2xl font-bold mb-6 neon-text">Log Progress</h2>
+            <input type="hidden" id="activeExerciseId">
+            <div class="flex flex-col gap-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 uppercase mb-2">Weight (kg)</label>
+                        <input type="number" id="logWeight" step="0.1" class="input-dark p-3 rounded-lg w-full" placeholder="0.0">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 uppercase mb-2">Reps</label>
+                        <input type="number" id="logReps" class="input-dark p-3 rounded-lg w-full" placeholder="0">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button onclick="closeModal('logModal')" class="text-gray-400 hover:text-white px-4 py-2 transition-colors">Cancel</button>
+                    <button onclick="saveLog()" class="neon-bg px-6 py-2 rounded-lg font-bold transition-all">Save Entry</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="modal-overlay fixed inset-0 hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-card p-8 rounded-2xl w-full max-w-2xl fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold neon-text">Progress History</h2>
+                <button onclick="closeModal('historyModal')" class="text-gray-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <div id="historyContent" class="max-h-[60vh] overflow-y-auto space-y-3 pr-2">
+                <!-- Logs will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let groups = [];
+
+        async function api(endpoint, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' }
+            };
+            if (body) options.body = JSON.stringify(body);
+            const res = await fetch(endpoint, options);
+            return res.json();
+        }
+
+        async function loadDashboard() {
+            groups = await api('/api/groups');
+            renderGroups();
+        }
+
+        function renderGroups() {
+            const container = document.getElementById('mainContent');
+            container.innerHTML = '';
+
+            if (groups.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-20">
+                        <p class="text-gray-500 text-lg">No workout groups yet. Create one to get started!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            groups.forEach(group => {
+                const card = document.createElement('div');
+                card.className = 'glass-card p-6 rounded-2xl flex flex-col';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-xl font-bold">${group.name}</h3>
+                        <button onclick="deleteGroup(${group.id})" class="text-gray-600 hover:text-red-400 transition-colors">&times;</button>
+                    </div>
+                    <div id="ex-list-${group.id}" class="space-y-2 mb-6 flex-grow">
+                        <!-- Exercises load here -->
+                    </div>
+                    <button onclick="openExerciseModal(${group.id})" class="text-xs font-bold text-gray-400 hover:text-lime-400 transition-colors text-left uppercase tracking-wider">
+                        + Add Exercise
+                    </button>
+                `;
+                container.appendChild(card);
+                loadExercises(group.id);
+            });
+        }
+
+        async function loadExercises(groupId) {
+            const exercises = await api(`/api/groups/${groupId}/exercises`);
+            const container = document.getElementById(`ex-list-${groupId}`);
+            container.innerHTML = '';
+
+            exercises.forEach(ex => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center p-2 rounded-lg hover:bg-white/5 transition-colors group';
+                row.innerHTML = `
+                    <span class="text-sm text-gray-300 group-hover:text-white transition-colors">${ex.name}</span>
+                    <div class="flex gap-2">
+                        <button onclick="openLogModal(${ex.id})" class="p-1 text-xs bg-white/10 rounded hover:bg-lime-500 hover:text-black transition-all">Log</button>
+                        <button onclick="openHistoryModal(${ex.id})" class="p-1 text-xs bg-white/10 rounded hover:bg-gray-700 transition-all">History</button>
+                        <button onclick="deleteExercise(${ex.id})" class="p-1 text-xs bg-white/10 rounded hover:bg-red-900 transition-all text-gray-500">&times;</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        async function openExerciseModal(groupId) {
+            document.getElementById('activeGroupId').value = groupId;
+            openModal('exerciseModal');
+        }
+
+        async function saveGroup() {
+            const name = document.getElementById('groupName').value;
+            if (!name) return alert('Name required');
+            await api('/api/groups', 'POST', { name });
+            document.getElementById('groupName').value = '';
+            closeModal('groupModal');
+            loadDashboard();
+        }
+
+        async function saveExercise() {
+            const groupId = document.getElementById('activeGroupId').value;
+            const name = document.getElementById('exerciseName').value;
+            if (!name) return alert('Name required');
+            await api(`/api/groups/${groupId}/exercises`, 'POST', { name });
+            document.getElementById('exerciseName').value = '';
+            closeModal('exerciseModal');
+            loadDashboard();
+        }
+
+        async function openLogModal(exerciseId) {
+            document.getElementById('activeExerciseId').value = exerciseId;
+            openModal('logModal');
+        }
+
+        async function saveLog() {
+            const exerciseId = document.getElementById('activeExerciseId').value;
+            const weight = document.getElementById('logWeight').value;
+            const reps = document.getElementById('logReps').value;
+            if (!weight || !reps) return alert('Weight and reps required');
+            await api(`/api/exercises/${exerciseId}/logs`, 'POST', { weight, reps });
+            document.getElementById('logWeight').value = '';
+            document.getElementById('logReps').value = '';
+            closeModal('logModal');
+        }
+
+        async function openHistoryModal(exerciseId) {
+            const logs = await api(`/api/exercises/${exerciseId}/logs`);
+            const container = document.getElementById('historyContent');
+            container.innerHTML = '';
+
+            if (logs.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-10">No logs recorded yet.</p>';
+                return;
+            }
+
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-4 rounded-xl bg-white/5 border border-white/10 fade-in';
+                div.innerHTML = `
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase mb-1">${log.date}</p>
+                        <p class="text-lg font-bold">${log.weight}kg <span class="text-gray-400 font-normal text-sm">x</span> ${log.reps} reps</p>
+                    </div>
+                    <div class="text-lime-400 font-bold text-sm">
+                        Entry #${log.id}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            openModal('historyModal');
+        }
+
+        async function deleteGroup(id) {
+            if (!confirm('Delete this group and all its exercises?')) return;
+            await api(`/api/groups/${id}`, 'DELETE');
+            loadDashboard();
+        }
+
+        async function deleteExercise(id) {
+            if (!confirm('Delete this exercise?')) return;
+            await api(`/api/exercises/${id}`, 'DELETE');
+            loadDashboard();
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        window.onload = loadDashboard;
+    </script>
+</body>
+</html>

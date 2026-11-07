@@ -1,0 +1,64 @@
+body {
+    background-color: #0a0a0a;
+    color: #e5e7eb;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.neon-border {
+    border: 1px solid #bef264;
+    box-shadow: 0 0 10px rgba(190, 242, 100, 0.2);
+}
+
+.neon-text {
+    color: #bef264;
+    text-shadow: 0 0 8px rgba(190, 242, 100, 0.5);
+}
+
+.neon-bg {
+    background-color: #bef264;
+    color: #000;
+}
+
+.neon-bg:hover {
+    background-color: #d9f99d;
+    box-shadow: 0 0 15px rgba(190, 242, 100, 0.6);
+}
+
+.glass-card {
+    background: rgba(23, 23, 23, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    border-color: #bef264;
+    transform: translateY(-2px);
+}
+
+.input-dark {
+    background: #171717;
+    border: 1px solid #333;
+    color: white;
+    transition: border-color 0.2s;
+}
+
+.input-dark:focus {
+    border-color: #bef264;
+    outline: none;
+    box-shadow: 0 0 0 1px #bef264;
+}
+
+.modal-overlay {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
